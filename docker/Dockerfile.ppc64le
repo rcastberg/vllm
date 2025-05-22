@@ -1,10 +1,10 @@
-ARG BASE_UBI_IMAGE_TAG=9.5-1741850109
+ARG BASE_IMAGE_TAG=9
 
 ###############################################################
 # base stage with basic dependencies
 ###############################################################
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:${BASE_UBI_IMAGE_TAG} AS base-builder
+FROM rockylinux:${BASE_IMAGE_TAG} AS base-builder
 
 ARG PYTHON_VERSION=3.12
 ARG OPENBLAS_VERSION=0.3.29
@@ -17,12 +17,8 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib64:/usr/local/lib:/usr/lib64:
 ENV UV_LINK_MODE=copy
 
 # install gcc-13, python, rust, openblas
-# Note: A symlink for libatomic.so is created for gcc-13 (linker fails to find libatomic otherwise - reqd. for sentencepiece)
-# Note: A dummy file 'control' is created in /tmp/ to artificially create dependencies between stages when building stages in parallel
-#       when `--jobs=<N>` is passed with podman build command
-RUN microdnf install -y openssl-devel dnf \
-    && dnf install -y  https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
-    && dnf config-manager --set-enabled codeready-builder-for-rhel-9-ppc64le-rpms \
+RUN dnf install -y epel-release \
+    && dnf config-manager --set-enabled crb \
     && dnf install -y \
        git tar gcc-toolset-13 automake libtool numactl-devel lapack-devel \
        pkgconfig xsimd zeromq-devel kmod findutils protobuf* \
@@ -206,7 +202,7 @@ RUN git clone --recursive https://github.com/Reference-LAPACK/lapack.git -b v${L
 #                   FINAL VLLM IMAGE STAGE                    #
 ###############################################################
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:${BASE_UBI_IMAGE_TAG} AS vllm-openai
+FROM rockylinux:${BASE_IMAGE_TAG} AS vllm-openai
 
 ARG PYTHON_VERSION=3.12
 ARG OPENBLAS_VERSION=0.3.29
